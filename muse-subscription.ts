@@ -1,7 +1,6 @@
 import { $which } from "@oh-my-pi/pi-utils";
 import * as path from "node:path";
 import type { ExtensionAPI, ProviderModelConfig } from "@oh-my-pi/pi-coding-agent";
-import museSystemPreamble from "./muse-system.md" with { type: "text" };
 
 interface MuseCredential {
 	api_base_url: string;
@@ -143,9 +142,12 @@ async function discoverModels(): Promise<ProviderModelConfig[]> {
 
 export default async function (pi: ExtensionAPI) {
 	const credential = await loadCredential();
-	pi.on("before_agent_start", (event, ctx) => {
-		if (ctx.model.provider !== "muse") return;
-		return { systemPrompt: [museSystemPreamble, ...event.systemPrompt] };
+
+	pi.on("before_provider_request", (event, ctx) => {
+		if (ctx.model?.provider !== "muse" || !isObject(event.payload) || Array.isArray(event.payload)) return;
+		const serviceTier = pi.getServiceTiers().openai;
+		if (!serviceTier || serviceTier === "auto") return;
+		return { ...event.payload, service_tier: serviceTier };
 	});
 
 	pi.registerProvider("muse", {
