@@ -142,6 +142,12 @@ async function discoverModels(): Promise<ProviderModelConfig[]> {
 
 export default async function (pi: ExtensionAPI) {
 	const credential = await loadCredential();
+	const musePrompt = (await Bun.file(new URL("./muse-system-remix.md", import.meta.url)).text()).trim();
+
+	pi.on("before_agent_start", (event, ctx) => {
+		if (ctx.model?.provider !== "muse") return;
+		return { systemPrompt: [musePrompt, ...event.systemPrompt] };
+	});
 
 	pi.on("before_provider_request", (event, ctx) => {
 		if (ctx.model?.provider !== "muse" || !isObject(event.payload) || Array.isArray(event.payload)) return;
